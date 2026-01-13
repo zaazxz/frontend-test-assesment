@@ -1,6 +1,16 @@
 import React, { useMemo, useState } from 'react'
 import SecondaryLayout from '@/layouts/secondary'
-import { Form, Input, Select, SelectItem, Checkbox, Button } from "@heroui/react";
+import {
+    Input,
+    Checkbox,
+    Button,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    useDisclosure,
+} from "@heroui/react";
 
 // Eyelash icon
 export const EyeSlashFilledIcon = (props?: any) => {
@@ -70,6 +80,7 @@ const login = () => {
     const [password, setPassword] = useState('');
     const [checkbox, setCheckbox] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
+    const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     // Password visibility
     const toggleVisibility = () => setIsVisible(!isVisible);
@@ -99,7 +110,7 @@ const login = () => {
 
     // Login logic
     const handleLogin = () => {
-        
+
         // Validate email and password
         if (email === "" || password === "") {
             return alert('Please enter your email and password.');
@@ -133,14 +144,14 @@ const login = () => {
                         {/* Input email */}
                         <div className="w-full flex flex-col gap-4">
                             <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
-                                <Input 
-                                    label="Email" 
-                                    type="email" 
-                                    variant={"bordered"} 
-                                    required 
-                                    value={email} 
-                                    isInvalid={isInvalid} 
-                                    onValueChange={setEmail} 
+                                <Input
+                                    label="Email"
+                                    type="email"
+                                    variant={"bordered"}
+                                    required
+                                    value={email}
+                                    isInvalid={isInvalid}
+                                    onValueChange={setEmail}
                                     color={isInvalid ? "danger" : "default"}
                                     errorMessage={isInvalid ? "Invalid email" : ""}
                                 />
@@ -192,6 +203,11 @@ const login = () => {
                             </div>
                         </div>
 
+                        {/* Debug modal */}
+                        <Button color="secondary" onPress={onOpen}>
+                            Open Modal
+                        </Button>
+
                     </div>
 
                 </div>
@@ -202,6 +218,47 @@ const login = () => {
                 </div>
 
             </div>
+
+            <Modal
+                backdrop="blur"
+                classNames={{
+                    body: "p-10",
+                    closeButton: "hover:bg-white/5 active:bg-white/10",
+                }}
+                isOpen={isOpen}
+                radius="lg"
+                onOpenChange={onOpenChange}
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalBody>
+                                <p>
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam pulvinar risus non
+                                    risus hendrerit venenatis. Pellentesque sit amet hendrerit risus, sed porttitor
+                                    quam.
+                                </p>
+                                <p>
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam pulvinar risus non
+                                    risus hendrerit venenatis. Pellentesque sit amet hendrerit risus, sed porttitor
+                                    quam.
+                                </p>
+                                <p>
+                                    Magna exercitation reprehenderit magna aute tempor cupidatat consequat elit dolor
+                                    adipisicing. Mollit dolor eiusmod sunt ex incididunt cillum quis. Velit duis sit
+                                    officia eiusmod Lorem aliqua enim laboris do dolor eiusmod. Et mollit incididunt
+                                    nisi consectetur esse laborum eiusmod pariatur proident Lorem eiusmod et. Culpa
+                                    deserunt nostrud ad veniam.
+                                </p>
+                                <Button color="primary" variant="solid" onPress={onClose} className=''>
+                                    Close
+                                </Button>
+                            </ModalBody>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
         </SecondaryLayout>
 
     )
