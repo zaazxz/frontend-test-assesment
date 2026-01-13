@@ -6,11 +6,18 @@ import {
     Button,
     Modal,
     ModalContent,
-    ModalHeader,
     ModalBody,
-    ModalFooter,
     useDisclosure,
+    Spinner,
+    Form,
 } from "@heroui/react";
+import { useRouter } from 'next/router';
+
+// Dummy account
+const account = {
+    email: "admin@gmail.com",
+    password: "password",
+};
 
 // Eyelash icon
 export const EyeSlashFilledIcon = (props?: any) => {
@@ -75,11 +82,21 @@ export const EyeFilledIcon = (props?: any) => {
 
 const login = () => {
 
+    // Router
+    const router = useRouter();
+
     // State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [checkbox, setCheckbox] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState({
+        message: "",
+        description: "",
+    });
+
+    // Disclosure
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     // Password visibility
@@ -111,9 +128,54 @@ const login = () => {
     // Login logic
     const handleLogin = () => {
 
+        // Check is invalid
+        if (isInvalid) return
+
         // Validate email and password
         if (email === "" || password === "") {
-            return alert('Please enter your email and password.');
+
+            // Show error
+            setError({
+                message: "Error",
+                description: "Please fill all the fields",
+            });
+
+            // Open modal
+            onOpen();
+            return
+
+        }
+
+        // Login logic
+        if (email === account.email && password === account.password) {
+
+            // Creating token and logged in user data, store to localStorage
+            const token = crypto.randomUUID();
+
+            // Store to localStorage
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(account));
+
+            // [debugging] check console
+            // console.log(token);
+            // console.log(account);
+
+            // Show isLoading with setTimeout
+            setIsLoading(true);
+            setTimeout(() => {
+                router.push("/dashboard");
+            }, 1500);
+
+
+        } else {
+            setError({
+                message: "Error",
+                description: "Invalid email or password",
+            })
+
+            // Open modal
+            onOpen();
+            return
         }
 
     }
@@ -121,145 +183,191 @@ const login = () => {
     return (
 
         // Wrapper
-        <SecondaryLayout>
-            <div className="flex items-center h-screen bg-blue-700">
+        <>
+            <SecondaryLayout>
+                <div className="flex items-center h-screen bg-blue-700">
 
-                {/* Login Form */}
-                <div className="w-2/5 h-full rounded-tr-2xl rounded-br-2xl bg-white p-5 flex justify-center items-center flex-col text-blue-700">
+                    {/* Login Form */}
+                    <Form className="w-2/5 h-full rounded-tr-2xl rounded-br-2xl bg-white p-5 flex justify-center items-center flex-col text-blue-700" onSubmit={(e) => {
+                        e.preventDefault();
+                        handleLogin();
+                    }}>
 
-                    {/* Icon */}
-                    <div className="flex items-center justify-center gap-2">
-                        <img src="/images/logo/sovware-logo.png" alt="Logo" className="w-10 h-10" />
-                    </div>
-
-                    {/* Text welcome */}
-                    <div className="flex items-center justify-center gap-1 mt-3 flex-col">
-                        <h1 className="text-2xl">Welcome to <span className='font-bold'>S.2.R.E ADMIN</span></h1>
-                        <p className="text-sm">Please login with your registered account</p>
-                    </div>
-
-                    {/* Form */}
-                    <div className="w-[70%] p-2 mt-3 flex flex-col gap-3">
-
-                        {/* Input email */}
-                        <div className="w-full flex flex-col gap-4">
-                            <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
-                                <Input
-                                    label="Email"
-                                    type="email"
-                                    variant={"bordered"}
-                                    required
-                                    value={email}
-                                    isInvalid={isInvalid}
-                                    onValueChange={setEmail}
-                                    color={isInvalid ? "danger" : "default"}
-                                    errorMessage={isInvalid ? "Invalid email" : ""}
-                                />
-                            </div>
+                        {/* Icon */}
+                        <div className="flex items-center justify-center gap-2">
+                            <img src="/images/logo/sovware-logo.png" alt="Logo" className="w-10 h-10" />
                         </div>
 
-                        {/* Input password */}
-                        <div className="w-full flex flex-col gap-4">
-                            <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
-                                <Input
-                                    className="max-w"
-                                    endContent={
-                                        <button
-                                            aria-label="toggle password visibility"
-                                            className="focus:outline-solid outline-transparent mb-1.5"
-                                            type="button"
-                                            onClick={toggleVisibility}
-                                        >
-                                            {isVisible ? (
-                                                <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
-                                            ) : (
-                                                <EyeFilledIcon className="text-2xl text-default-400 pointer-events-none" />
-                                            )}
-                                        </button>
-                                    }
-                                    label="Password"
-                                    type={isVisible ? "text" : "password"}
-                                    variant="bordered"
-                                    required
-                                />
-                            </div>
+                        {/* Text welcome */}
+                        <div className="flex items-center justify-center gap-1 mt-3 flex-col">
+                            <h1 className="text-2xl">Welcome to <span className='font-bold'>S.2.R.E ADMIN</span></h1>
+                            <p className="text-sm">Please login with your registered account</p>
                         </div>
 
-                        {/* Remember me */}
-                        <div className="w-full flex flex-col gap-4">
-                            <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
-                                <Checkbox size='sm' onChange={handleCheckboxChange}>
-                                    <small className={`text-sm ${checkbox ? "text-blue-600" : "text-gray-600"}`}>Remember me</small>
-                                </Checkbox>
+                        {/* Form */}
+                        <div className="w-[70%] p-2 mt-3 flex flex-col gap-3">
+
+                            {/* Input email */}
+                            <div className="w-full flex flex-col gap-4">
+                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                    <Input
+                                        label="Email"
+                                        type="email"
+                                        variant={"bordered"}
+                                        required
+                                        value={email}
+                                        isInvalid={isInvalid}
+                                        onValueChange={setEmail}
+                                        color={isInvalid ? "danger" : "default"}
+                                        errorMessage={isInvalid ? "Invalid email" : ""}
+                                    />
+                                </div>
                             </div>
+
+                            {/* Input password */}
+                            <div className="w-full flex flex-col gap-4">
+                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                    <Input
+                                        className="max-w"
+                                        endContent={
+                                            <button
+                                                aria-label="toggle password visibility"
+                                                className="focus:outline-solid outline-transparent mb-1.5"
+                                                type="button"
+                                                onClick={toggleVisibility}
+                                            >
+                                                {isVisible ? (
+                                                    <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+                                                ) : (
+                                                    <EyeFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+                                                )}
+                                            </button>
+                                        }
+                                        label="Password"
+                                        type={isVisible ? "text" : "password"}
+                                        variant="bordered"
+                                        required
+                                        onValueChange={setPassword}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Remember me */}
+                            <div className="w-full flex flex-col gap-4">
+                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                    <Checkbox size='sm' onChange={handleCheckboxChange}>
+                                        <small className={`text-sm ${checkbox ? "text-blue-600" : "text-gray-600"}`}>Remember me</small>
+                                    </Checkbox>
+                                </div>
+                            </div>
+
+                            {/* Submit button */}
+                            <div className="w-full flex flex-col gap-4">
+                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                    <Button className="w-full" color="primary" type='submit'>
+                                        Login
+                                    </Button>
+                                </div>
+                            </div>
+
                         </div>
 
-                        {/* Submit button */}
-                        <div className="w-full flex flex-col gap-4">
-                            <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
-                                <Button className="w-full" color="primary" onPress={() => { handleLogin() }}>
-                                    Login
-                                </Button>
-                            </div>
+                    </Form>
+
+                    {/* Decoration */}
+                    <div className="w-3/5 h-full p-5 flex justify-center items-center flex-col text-white">
+
+                        {/* Decoration Image */}
+                        <div className="w-[70%]">
+                            <img src="/images/assets/img-1.png" alt="Login" className="w-full h-full object-cover" />
                         </div>
 
-                        {/* Debug modal */}
-                        <Button color="secondary" onPress={onOpen}>
-                            Open Modal
-                        </Button>
+                        {/* Main Text */}
+                        <div className="flex items-center justify-center gap-2 flex-col">
+                            <h1 className="text-xl font-bold">Building Happiness, Shaping Futures</h1>
+                        </div>
+
+                        {/* Sub Text */}
+                        <div className="flex items-center justify-center gap-2 mt-5 flex-col w-[60%] text-center text-xs">
+                            <p>Where joy meets learning, and dreams take flight: a school of happiness and endless possibilities.</p>
+                        </div>
 
                     </div>
 
                 </div>
 
-                {/* Decoration */}
-                <div className="w-3/5 h-full p-5">
-                    test
+                <Modal
+                    backdrop="blur"
+                    classNames={{
+                        body: "p-10",
+                        closeButton: "hover:bg-white/5 active:bg-white/10",
+                    }}
+                    isOpen={isOpen}
+                    radius="lg"
+                    onOpenChange={onOpenChange}
+                >
+                    <ModalContent>
+                        {(onClose) => (
+                            <>
+                                <ModalBody>
+
+                                    {/* Error icon (use internet for x icon) */}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <div className='w-15 h-15 rounded-full bg-red-500 flex justify-center items-center text-2xl text-white'>
+                                            x
+                                        </div>
+                                    </div>
+
+                                    {/* Error message */}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <h1 className="text-2xl font-bold">
+                                            {error.message}
+                                        </h1>
+                                    </div>
+
+                                    {/* Error description */}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <p className="text-lg">
+                                            {error.description}
+                                        </p>
+                                    </div>
+
+                                    {/* Close button */}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Button onPress={onClose} color='primary' variant='flat'>Close</Button>
+                                    </div>
+                                </ModalBody>
+                            </>
+                        )}
+                    </ModalContent>
+                </Modal>
+
+            </SecondaryLayout>
+
+            {/* Loading screen */}
+            {isLoading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 flex-col">
+
+                    {/* Image and text */}
+                    <div className="flex items-center justify-center gap-5">
+                        <img src="/images/logo/sovware-logo.png" alt="Logo" className="w-15 h-15" />
+
+                        {/* Text */}
+                        <div className="flex justify-center flex-col">
+                            <h1 className="text-2xl font-bold">SOVWARE</h1>
+                            <h1 className="text-2xl">EDGE SYSTEM</h1>
+                        </div>
+
+                    </div>
+
+                    {/* Spinner */}
+                    <div className="mt-10">
+                        <Spinner />
+                    </div>
+
                 </div>
-
-            </div>
-
-            <Modal
-                backdrop="blur"
-                classNames={{
-                    body: "p-10",
-                    closeButton: "hover:bg-white/5 active:bg-white/10",
-                }}
-                isOpen={isOpen}
-                radius="lg"
-                onOpenChange={onOpenChange}
-            >
-                <ModalContent>
-                    {(onClose) => (
-                        <>
-                            <ModalBody>
-                                <p>
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam pulvinar risus non
-                                    risus hendrerit venenatis. Pellentesque sit amet hendrerit risus, sed porttitor
-                                    quam.
-                                </p>
-                                <p>
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam pulvinar risus non
-                                    risus hendrerit venenatis. Pellentesque sit amet hendrerit risus, sed porttitor
-                                    quam.
-                                </p>
-                                <p>
-                                    Magna exercitation reprehenderit magna aute tempor cupidatat consequat elit dolor
-                                    adipisicing. Mollit dolor eiusmod sunt ex incididunt cillum quis. Velit duis sit
-                                    officia eiusmod Lorem aliqua enim laboris do dolor eiusmod. Et mollit incididunt
-                                    nisi consectetur esse laborum eiusmod pariatur proident Lorem eiusmod et. Culpa
-                                    deserunt nostrud ad veniam.
-                                </p>
-                                <Button color="primary" variant="solid" onPress={onClose} className=''>
-                                    Close
-                                </Button>
-                            </ModalBody>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
-
-        </SecondaryLayout>
+            )}
+        </>
 
     )
 }

@@ -8,8 +8,6 @@ export const Head = (name?: any) => {
   // default config
   const config = siteConfig();
 
-  console.log(name);
-
   return (
     <NextHead>
 
