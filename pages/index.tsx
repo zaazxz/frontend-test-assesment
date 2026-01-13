@@ -9,6 +9,9 @@ import { GithubIcon } from "@/components/icons";
 import DefaultLayout from "@/layouts/default";
 
 export default function IndexPage() {
+
+  const config = siteConfig();
+
   return (
     <DefaultLayout>
       <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
@@ -32,14 +35,14 @@ export default function IndexPage() {
               radius: "full",
               variant: "shadow",
             })}
-            href={siteConfig.links.docs}
+            href={config.links.docs}
           >
             Documentation
           </Link>
           <Link
             isExternal
             className={buttonStyles({ variant: "bordered", radius: "full" })}
-            href={siteConfig.links.github}
+            href={config.links.github}
           >
             <GithubIcon size={20} />
             GitHub
