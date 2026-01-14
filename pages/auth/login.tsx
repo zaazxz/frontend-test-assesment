@@ -14,13 +14,7 @@ import {
     useDisclosure,
 } from "@heroui/react";
 import { useRouter } from 'next/router';
-import React, { useMemo, useState } from 'react';
-
-// Dummy account
-const account = {
-    email: "admin@gmail.com",
-    password: "password",
-};
+import { useMemo } from 'react';
 
 const login = () => {
 
@@ -35,12 +29,12 @@ const login = () => {
         isVisible,
         isLoading,
         error,
+        login,
+        setError,
         setEmail,
         setPassword,
         toggleCheckbox,
         toggleVisibility,
-        setLoading,
-        setError,
     } = useLoginStore();
 
     // Disclosure
@@ -59,27 +53,30 @@ const login = () => {
 
 
     // Login logic
-    const handleLogin = () => {
+    const handleLogin = async () => {
         if (isInvalid) return;
 
         if (email === '' || password === '') {
-            setError({ message: 'Error', description: 'Please fill all the fields' });
+            setError({ 
+                message: 'Error', 
+                description: 'Please fill all the fields' 
+            });
             onOpen();
             return;
         }
 
-        if (email === account.email && password === account.password) {
-            const token = crypto.randomUUID();
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(account));
+        const success = await login();
 
-            setLoading(true);
-            setTimeout(() => router.push('/'), 1500);
+        if (success) {
+            setTimeout(() => router.push('/design'), 1000);
         } else {
-            setError({ message: 'Error', description: 'Invalid email or password' });
+            setError({ 
+                message: 'Error', 
+                description: 'Invalid email or password' 
+            });
             onOpen();
         }
-    };
+    }
 
     return (
 
