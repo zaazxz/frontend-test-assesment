@@ -1,5 +1,6 @@
 import EyeFilledIcon from '@/components/icons/EyeFilledIcon';
 import EyeSlashFilledIcon from '@/components/icons/EyeSlashFilledIcon';
+import LoadingOverlay from '@/components/LoadingOverlay';
 import SecondaryLayout from '@/layouts/secondary';
 import { useLoginStore } from '@/stores/useLoginStore';
 import {
@@ -74,7 +75,7 @@ const login = () => {
             localStorage.setItem('user', JSON.stringify(account));
 
             setLoading(true);
-            setTimeout(() => router.push('/dashboard'), 1500);
+            setTimeout(() => router.push('/'), 1500);
         } else {
             setError({ message: 'Error', description: 'Invalid email or password' });
             onOpen();
@@ -85,11 +86,11 @@ const login = () => {
 
         // Wrapper
         <>
-            <SecondaryLayout>
+            <SecondaryLayout title="Login">
                 <div className="flex items-center h-screen bg-blue-700">
 
                     {/* Login Form */}
-                    <Form className="w-2/5 h-full rounded-tr-2xl rounded-br-2xl bg-white p-5 flex justify-center items-center flex-col text-blue-700" onSubmit={(e) => {
+                    <Form className="w-full block lg:w-2/5 lg:h-full rounded-xl lg:rounded-none lg:rounded-tr-2xl lg:rounded-br-2xl bg-white p-5 lg:flex justify-center items-center flex-col text-blue-700 m-5 lg:m-0" onSubmit={(e) => {
                         e.preventDefault();
                         handleLogin();
                     }}>
@@ -106,11 +107,11 @@ const login = () => {
                         </div>
 
                         {/* Form */}
-                        <div className="w-[70%] p-2 mt-3 flex flex-col gap-3">
+                        <div className="w-full lg:w-[70%] p-2 mt-3 flex flex-col gap-3">
 
                             {/* Input email */}
                             <div className="w-full flex flex-col gap-4">
-                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                <div className="flex w-full flex-wrap lg:flex-nowrap mb-6 lg:mb-0 gap-4">
                                     <Input
                                         label="Email"
                                         type="email"
@@ -127,7 +128,7 @@ const login = () => {
 
                             {/* Input password */}
                             <div className="w-full flex flex-col gap-4">
-                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                <div className="flex w-full flex-wrap lg:flex-nowrap mb-6 lg:mb-0 gap-4">
                                     <Input
                                         className="max-w"
                                         endContent={
@@ -155,7 +156,7 @@ const login = () => {
 
                             {/* Remember me */}
                             <div className="w-full flex flex-col gap-4">
-                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                <div className="flex w-full flex-wrap lg:flex-nowrap mb-6 lg:mb-0 gap-4">
                                     <Checkbox size='sm' onChange={toggleCheckbox}>
                                         <small className={`text-sm ${checkbox ? "text-blue-600" : "text-gray-600"}`}>Remember me</small>
                                     </Checkbox>
@@ -164,7 +165,7 @@ const login = () => {
 
                             {/* Submit button */}
                             <div className="w-full flex flex-col gap-4">
-                                <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
+                                <div className="flex w-full flex-wrap lg:flex-nowrap mb-6 lg:mb-0 gap-4">
                                     <Button className="w-full" color="primary" type='submit'>
                                         Login
                                     </Button>
@@ -176,7 +177,7 @@ const login = () => {
                     </Form>
 
                     {/* Decoration */}
-                    <div className="w-3/5 h-full p-5 flex justify-center items-center flex-col text-white">
+                    <div className="hidden lg:w-3/5 h-full p-5 lg:flex justify-center items-center flex-col text-white">
 
                         {/* Decoration Image */}
                         <div className="w-[70%]">
@@ -247,26 +248,7 @@ const login = () => {
 
             {/* Loading screen */}
             {isLoading && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 flex-col">
-
-                    {/* Image and text */}
-                    <div className="flex items-center justify-center gap-5">
-                        <img src="/images/logo/sovware-logo.png" alt="Logo" className="w-15 h-15" />
-
-                        {/* Text */}
-                        <div className="flex justify-center flex-col">
-                            <h1 className="text-2xl font-bold">SOVWARE</h1>
-                            <h1 className="text-2xl">EDGE SYSTEM</h1>
-                        </div>
-
-                    </div>
-
-                    {/* Spinner */}
-                    <div className="mt-10">
-                        <Spinner />
-                    </div>
-
-                </div>
+                <LoadingOverlay />
             )}
         </>
 

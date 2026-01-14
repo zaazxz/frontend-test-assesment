@@ -1,73 +1,47 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = () => ({
-  name: process.env.NEXT_PUBLIC_SITE_NAME,
-  description: "Make beautiful websites regardless of your design experience.",
-  navItems: [
+  name: process.env.NEXT_PUBLIC_SITE_NAME || "Name",
+  description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "Desc",
+  sidebarItems: [
     {
-      label: "Home",
-      href: "/",
+      prefix: "Dashboard",
+      items: [
+        {
+          name: "Dashboard",
+          href: "/",
+          icon: "dashboard",
+        },
+        {
+          name: "Monitor",
+          href: "/monitor",
+          icon: "monitor",
+        },
+        {
+          name: "Design",
+          href: "/design",
+          icon: "design",
+        },
+      ]
     },
     {
-      label: "Docs",
-      href: "/docs",
-    },
-    {
-      label: "Pricing",
-      href: "/pricing",
-    },
-    {
-      label: "Blog",
-      href: "/blog",
-    },
-    {
-      label: "About",
-      href: "/about",
-    },
-    {
-      label: "Sign In",
-      href: "/auth/login",
-    },
-  ],
-  navMenuItems: [
-    {
-      label: "Profile",
-      href: "/profile",
-    },
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-    },
-    {
-      label: "Projects",
-      href: "/projects",
-    },
-    {
-      label: "Team",
-      href: "/team",
-    },
-    {
-      label: "Calendar",
-      href: "/calendar",
-    },
-    {
-      label: "Settings",
-      href: "/settings",
-    },
-    {
-      label: "Help & Feedback",
-      href: "/help-feedback",
-    },
-    {
-      label: "Logout",
-      href: "/logout",
+      prefix: "Management",
+      items: [
+        {
+          name: "User Management",
+          href: "/users",
+          icon: "user",
+        }
+      ]
     },
   ],
-  links: {
-    github: "https://github.com/heroui-inc/heroui",
-    twitter: "https://twitter.com/hero_ui",
-    docs: "https://heroui.com",
-    discord: "https://discord.gg/9b6yyZKmH4",
-    sponsor: "https://patreon.com/jrgarciadev",
-  },
 });
+
+export const getProtectedRoutes = () => {
+  const { sidebarItems } = siteConfig();
+
+  return sidebarItems.flatMap((section) => (
+    section.items.map((item) => item.href))
+  );
+};
+
