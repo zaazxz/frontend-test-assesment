@@ -64,7 +64,7 @@ export default function DefaultLayout({ children, title = "Dashboard" }: Default
         </div>
 
         {/* Content */}
-        <div className="overflow-auto p-3 h-full flex justify-center items-center w-full">
+        <div className="overflow-auto p-3 h-full w-full">
           {children}
         </div>
 

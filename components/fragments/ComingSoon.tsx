@@ -1,11 +1,10 @@
-import { Button } from '@heroui/button'
 import Link from 'next/link'
 import React from 'react'
 
 const ComingSoon = () => {
   return (
     <>
-        <div className="flex flex-col justify-center items-center w-full p-3">
+        <div className="flex flex-col justify-center items-center w-full h-full p-3">
 
             {/* Images */}
             <img src="/images/assets/web-development.svg" alt="Coming Soon Images" className='cover w-[25%] h-[25%]' />
