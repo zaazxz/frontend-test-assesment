@@ -7,46 +7,33 @@ import { siteConfig } from "@/config/site";
 import { usePagination } from "@/utils/hooks/usePagination";
 import { useDisclosure } from "@heroui/modal";
 import { Pagination } from "@heroui/pagination";
-
-export const animals = [
-    { key: "cat", label: "Cat" },
-    { key: "dog", label: "Dog" },
-    { key: "elephant", label: "Elephant" },
-    { key: "lion", label: "Lion" },
-    { key: "tiger", label: "Tiger" },
-    { key: "giraffe", label: "Giraffe" },
-    { key: "dolphin", label: "Dolphin" },
-    { key: "penguin", label: "Penguin" },
-    { key: "zebra", label: "Zebra" },
-    { key: "shark", label: "Shark" },
-    { key: "whale", label: "Whale" },
-    { key: "otter", label: "Otter" },
-    { key: "crocodile", label: "Crocodile" },
-];
-
-export const items = [
-    { id: 1, name: "Tony Reichert", role: "CEO", status: "Active" },
-    { id: 2, name: "Zoey Lang", role: "Tech Lead", status: "Paused" }, 
-    { id: 3, name: "Jane Fisher", role: "Senior Dev", status: "Active" }, 
-    { id: 4, name: "William Howard", role: "Community Manager", status: "Vacation" }, 
-    { id: 5, name: "Kristen Copper", role: "Sales", status: "Active" }, 
-    { id: 6, name: "Bruce Wayne", role: "Investor", status: "Active" }, 
-    { id: 7, name: "Natasha Romanoff", role: "CEO", status: "Active" }, 
-    { id: 8, name: "Clint Barton", role: "CEO", status: "Active" }, 
-    { id: 9, name: "Natasha Romanoff", role: "CEO", status: "Active" }, 
-    { id: 10, name: "Natasha Romanoff", role: "CEO", status: "Active" }, 
-    { id: 11, name: "Natasha Romanoff", role: "CEO", status: "Active" }, 
-    { id: 12, name: "Natasha Romanoff", role: "CEO", status: "Active" },
-];
+import { useDesignStore } from "@/stores/useDesignStore";
+import { useEffect, useMemo, useState } from "react";
+import { Spinner } from "@heroui/spinner";
 
 const DesignIndex = () => {
 
     // import site config
     const config = siteConfig();
 
+    // Fetching data
+    const { designs, fetchDesigns, selectedDesign, selectedDesignId, setSelectedDesign, loading, search } = useDesignStore();
+
+    const filteredDesigns = useMemo(() => {
+        if (!search) return designs;
+
+        return designs.filter((d) =>
+            d.classId.toLowerCase().includes(search.toLowerCase())
+        )
+    }, [designs, search])
+
+    useEffect(() => {
+        fetchDesigns();
+    }, [])
+
     // Use Pagination Hooks
     const itemsPerPage = 10;
-    const pagination = usePagination(items, itemsPerPage);
+    const pagination = usePagination(filteredDesigns, itemsPerPage);
 
     // Use Disclosure
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -76,12 +63,28 @@ const DesignIndex = () => {
 
                     {/* Search bar */}
                     <div className="flex items-center gap-5 mt-3 w-full">
-                        <DesignSearch />
+                        <DesignSearch 
+                            onOpen={onOpen}
+                        />
                     </div>
 
                     {/* Table */}
                     <div className="h-content overflow-auto p-3">
-                        <DesignTable items={pagination.paginatedItems} onSelect={() => { onOpen(); }} />
+                        {loading ? (
+                            <div className="w-full h-[300px] flex items-center justify-center">
+                                <Spinner size="lg" label="Loading designs..." />
+                            </div>
+                        ) : (
+                            <DesignTable
+                                items={pagination.paginatedItems}
+                                selectedId={selectedDesignId}
+                                onSelect={setSelectedDesign}
+                                onDoubleClick={(id) => {
+                                    setSelectedDesign(id);
+                                    onOpen();
+                                }}
+                            />
+                        )}
                     </div>
 
                     {/* Pagination */}
@@ -99,12 +102,11 @@ const DesignIndex = () => {
             </DefaultLayout>
 
             {/* Modal */}
-            <DesignModal 
-                isOpen={isOpen} 
-                onOpenChange={() => { onClose(); }} 
-                items={items} 
-                animals={animals} 
-                onOpen={onOpen} 
+            <DesignModal
+                isOpen={isOpen}
+                onOpenChange={() => { onClose(); }}
+                items={selectedDesign?.flowVersion || []}
+                onOpen={onOpen}
             />
 
         </>

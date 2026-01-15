@@ -3,17 +3,19 @@ import React from 'react'
 
 interface DesignTableProps {
     items: any[];
-    onSelect: (keys: any) => void;
+    selectedId: number | null;
+    onSelect: (id: number) => void;
+    onDoubleClick: (id: number) => void;
 }
 
-const DesignTable = ({ items, onSelect }: DesignTableProps) => {
+const DesignTable = ({ items, selectedId, onSelect, onDoubleClick }: DesignTableProps) => {
     return (
         <>
             <Table
                 aria-label="Example static collection table"
                 color="default"
-                selectionMode="single"
-                onSelectionChange={onSelect}
+                // selectionMode="single"
+                // onSelectionChange={onSelect}
                 removeWrapper
                 classNames={{
                     thead: "bg-transparent",
@@ -31,16 +33,32 @@ const DesignTable = ({ items, onSelect }: DesignTableProps) => {
                 }}
             >
                 <TableHeader>
-                    <TableColumn>NAME</TableColumn>
-                    <TableColumn>ROLE</TableColumn>
-                    <TableColumn>STATUS</TableColumn>
+                    <TableColumn>Class ID</TableColumn>
+                    <TableColumn>Number of Agents</TableColumn>
                 </TableHeader>
-                <TableBody items={items}>
+                <TableBody
+                    items={items}
+                    emptyContent={
+                        <div className="w-full py-10 flex justify-center text-gray-400 text-sm">
+                            Designs not found
+                        </div>
+                    }
+                >
                     {(item) => (
-                        <TableRow key={item.id}>
-                            <TableCell>{item.name}</TableCell>
-                            <TableCell>{item.role}</TableCell>
-                            <TableCell>{item.status}</TableCell>
+                        <TableRow
+                            key={item.id}
+                            aria-selected={selectedId === item.id}
+                            onPointerDown={() => onSelect(item.id)}
+                            onDoubleClick={() => onDoubleClick(item.id)}
+                            className="
+                                cursor-pointer
+                                transition-colors
+                                data-[selected=true]:bg-primary/10
+                                hover:bg-gray-100
+                            "
+                        >
+                            <TableCell>{item.classId}</TableCell>
+                            <TableCell>{item.numberOfAgents}</TableCell>
                         </TableRow>
                     )}
                 </TableBody>

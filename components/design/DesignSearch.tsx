@@ -1,9 +1,29 @@
 import { Button } from '@heroui/button'
 import { Input } from '@heroui/input'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import SearchIcon from '../icons/SearchIcon'
+import { useDesignStore } from '@/stores/useDesignStore'
+import { useDebounce } from '@/utils/hooks/useDebounce'
 
-const DesignSearch = () => {
+interface DesignSearchProps {
+    onOpen: () => void;
+}
+
+const DesignSearch = ({ onOpen }: DesignSearchProps) => {
+
+    // use Design Store
+    const { setSearch, selectedDesignId } = useDesignStore();
+
+    // use State
+    const [value, setValue] = useState("");
+
+    // Debounce
+    const debouncedValue = useDebounce(value, 500);
+
+    useEffect(() => {
+        setSearch(debouncedValue);
+    }, [debouncedValue, setSearch])
+
     return (
         <>
             <Input
@@ -28,6 +48,8 @@ const DesignSearch = () => {
                         "cursor-text!",
                     ],
                 }}
+                value={value}
+                onValueChange={setValue}
                 label="Search"
                 placeholder="Type to search..."
                 radius="lg"
@@ -35,7 +57,11 @@ const DesignSearch = () => {
                     <SearchIcon className="mb-0.5 dark:text-white/90 text-slate-400 pointer-events-none shrink-0" />
                 }
                 endContent={
-                    <Button color='primary'>
+                    <Button 
+                        color='primary'
+                        isDisabled={!selectedDesignId}
+                        onPress={onOpen}
+                    >
                         Open Class
                     </Button>
                 }
