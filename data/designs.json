@@ -5,30 +5,13 @@
     "numberOfAgents": 3,
     "flowVersion": [
       {
+        "id": 1,
         "majorVersion": 1,
         "minorVersion": 0,
         "designName": "-",
         "comment": "this is my comment",
         "status": "draft",
         "lastUpdated": "2022-01-01T00:00:00.000Z",
-        "minifiConfigVersion": {}
-      },
-      {
-        "majorVersion": 1,
-        "minorVersion": 1,
-        "designName": "-",
-        "comment": "this is my comment",
-        "status": "draft",
-        "lastUpdated": "2022-01-01T00:00:00.000Z",
-        "minifiConfigVersion": {}
-      },
-      {
-        "majorVersion": 2,
-        "minorVersion": 0,
-        "designName": "test data",
-        "comment": "test data post to API",
-        "status": "draft",
-        "lastUpdated": "2026-01-15T15:04:16.885Z",
         "minifiConfigVersion": {}
       }
     ]
@@ -39,26 +22,9 @@
     "numberOfAgents": 1,
     "flowVersion": [
       {
+        "id": 1,
         "majorVersion": 1,
         "minorVersion": 0,
-        "designName": "-",
-        "comment": "this is my comment",
-        "status": "draft",
-        "lastUpdated": "2022-01-01T00:00:00.000Z",
-        "minifiConfigVersion": {}
-      },
-      {
-        "majorVersion": 2,
-        "minorVersion": 0,
-        "designName": "-",
-        "comment": "this is my comment",
-        "status": "draft",
-        "lastUpdated": "2022-01-01T00:00:00.000Z",
-        "minifiConfigVersion": {}
-      },
-      {
-        "majorVersion": 2,
-        "minorVersion": 1,
         "designName": "-",
         "comment": "this is my comment",
         "status": "draft",

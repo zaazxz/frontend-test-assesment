@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { fontSans, fontMono } from "@/config/fonts";
 import "@/styles/globals.css";
+import '@xyflow/react/dist/style.css';
 import LoadingOverlay from "@/components/common/LoadingOverlay";
 import { getProtectedRoutes } from "@/config/site";
 import SessionExpiredModal from "@/components/common/SessionExpiredModal";
