@@ -6,40 +6,43 @@ import { useEffect, useState } from "react";
 
 import { fontSans, fontMono } from "@/config/fonts";
 import "@/styles/globals.css";
-import LoadingOverlay from "@/components/LoadingOverlay";
+import LoadingOverlay from "@/components/common/LoadingOverlay";
 import { getProtectedRoutes } from "@/config/site";
 
 export default function App({ Component, pageProps }: AppProps) {
-
-  // Router
   const router = useRouter();
-
-  // State
   const [checking, setChecking] = useState(true);
 
-  // useEffect
   useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
+      const protectedRoutes = getProtectedRoutes();
+      const isAuthRoute = router.pathname.startsWith("/auth");
+      const isProtectedRoute = protectedRoutes.includes(router.pathname);
 
-    // Get the token from local storage
-    const token = localStorage.getItem("token");
+      // if logged in
+      if (token && isAuthRoute) {
+        router.replace("/");
+        return;
+      }
 
-    // set the protected routes
-    const protectedRoutes = getProtectedRoutes();
+      // if non logged in
+      if (!token && isProtectedRoute) {
+        router.replace("/auth/login");
+        return;
+      }
 
-    if (token && router.pathname.startsWith("/auth")) {
-      router.replace("/");
-    } else if (!token && protectedRoutes.includes(router.pathname)) {
-      router.replace("/auth/login");
-    } else {
+      // Aman
       setChecking(false);
-    }
-  }, [router]);
+    };
+
+    checkAuth();
+  }, [router.pathname]);
 
   if (checking) {
-    return (
-      <LoadingOverlay />
-    )
+    return <LoadingOverlay />;
   }
+
 
   return (
     <HeroUIProvider navigate={router.push}>

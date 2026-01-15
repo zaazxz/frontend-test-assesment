@@ -1,6 +1,6 @@
 import EyeFilledIcon from '@/components/icons/EyeFilledIcon';
 import EyeSlashFilledIcon from '@/components/icons/EyeSlashFilledIcon';
-import LoadingOverlay from '@/components/LoadingOverlay';
+import LoadingOverlay from '@/components/common/LoadingOverlay';
 import SecondaryLayout from '@/layouts/secondary';
 import { useLoginStore } from '@/stores/useLoginStore';
 import {
