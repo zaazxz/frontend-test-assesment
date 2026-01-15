@@ -2,42 +2,72 @@ import type { AppProps } from "next/app";
 import { HeroUIProvider } from "@heroui/system";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { fontSans, fontMono } from "@/config/fonts";
 import "@/styles/globals.css";
 import LoadingOverlay from "@/components/common/LoadingOverlay";
 import { getProtectedRoutes } from "@/config/site";
+import SessionExpiredModal from "@/components/common/SessionExpiredModal";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+
+  const hadTokenRef = useRef(false);
 
   useEffect(() => {
-    const checkAuth = () => {
+    const token = localStorage.getItem("token");
+    const protectedRoutes = getProtectedRoutes();
+    const isAuthRoute = router.pathname.startsWith("/auth");
+    const isProtectedRoute = protectedRoutes.includes(router.pathname);
+
+    if (token) {
+      hadTokenRef.current = true;
+    }
+
+    // Logged in
+    if (token && isAuthRoute) {
+      router.replace("/");
+      return;
+    }
+
+    // Not logged in
+    if (!token && isProtectedRoute) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    setChecking(false);
+  }, [router.pathname]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
       const token = localStorage.getItem("token");
       const protectedRoutes = getProtectedRoutes();
-      const isAuthRoute = router.pathname.startsWith("/auth");
       const isProtectedRoute = protectedRoutes.includes(router.pathname);
 
-      // if logged in
-      if (token && isAuthRoute) {
-        router.replace("/");
-        return;
+      if (
+        !token &&
+        hadTokenRef.current &&
+        isProtectedRoute
+      ) {
+        setShowSessionModal(true);
+        hadTokenRef.current = false;
       }
+    }, 1000);
 
-      // if non logged in
-      if (!token && isProtectedRoute) {
-        router.replace("/auth/login");
-        return;
-      }
-
-      // Aman
-      setChecking(false);
-    };
-
-    checkAuth();
+    return () => clearInterval(interval);
   }, [router.pathname]);
+
+  const handleSessionConfirm = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setShowSessionModal(false);
+    router.replace("/auth/login");
+  };
 
   if (checking) {
     return <LoadingOverlay />;
@@ -47,6 +77,13 @@ export default function App({ Component, pageProps }: AppProps) {
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider attribute="class" defaultTheme="light">
         <Component {...pageProps} />
+
+        <SessionExpiredModal
+          isOpen={showSessionModal}
+          title="Session expired"
+          description="No session found, please login again."
+          onConfirm={handleSessionConfirm}
+        />
       </NextThemesProvider>
     </HeroUIProvider>
   );
