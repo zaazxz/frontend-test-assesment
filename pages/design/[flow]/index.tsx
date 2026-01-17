@@ -13,16 +13,9 @@ import { useDesignStore } from '@/stores/useDesignStore';
 import { Button } from '@heroui/button';
 import { Modal, ModalBody, ModalContent, useDisclosure } from '@heroui/modal';
 import { Tooltip } from '@heroui/tooltip';
-import { addEdge, applyEdgeChanges, applyNodeChanges, Background, BackgroundVariant, Controls, ReactFlow, ReactFlowProvider } from '@xyflow/react';
+import { addEdge, applyEdgeChanges, applyNodeChanges, Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider } from '@xyflow/react';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-
-const initialNodes = [
-    { id: 'n1', position: { x: 0, y: 0 }, data: { label: 'Node 1' } },
-    { id: 'n2', position: { x: 0, y: 100 }, data: { label: 'Node 2' } },
-];
-
-const initialEdges = [{ id: 'n1-n2', source: 'n1', target: 'n2' }];
 
 const DesignCanvasFlow = () => {
 
@@ -189,10 +182,12 @@ const DesignCanvasFlow = () => {
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     // State
-    const [nodes, setNodes] = useState(initialNodes);
-    const [edges, setEdges] = useState(initialEdges);
+    const [nodes, setNodes] = useState<any[]>([]);
+    const [edges, setEdges] = useState<any[]>([]);
     const [invalid, setInvalid] = useState(false);
+    const [rfInstance, setRfInstance] = useState<any>(null);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
+    const [selectedProcessors, setSelectedProcessors] = useState<any[]>([]);
     const [activeButtonFilter, setActiveButtonFilter] = useState<'all' | 'processors' | 'sql'>('all');
     const [checking, setChecking] = useState(true);
     const [resolved, setResolved] = useState<{
@@ -257,6 +252,63 @@ const DesignCanvasFlow = () => {
 
     const filterBtnClass = (active: boolean) => `w-full p-3 rounded text-start flex gap-2 transition ${active ? 'bg-blue-600 text-white' : 'bg-gray-400 text-white hover:bg-gray-600'}`;
 
+    const addProcessorNode = (processor: any, position?: { x: number; y: number; }) => {
+        const newNode = {
+            id: crypto.randomUUID(),
+            type: 'processor',
+            position: position ?? {
+                x: Math.random() * 400,
+                y: Math.random() * 400,
+            },
+            data: {
+                label: processor.name,
+                processor,
+            }
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+    }
+
+    const ProcessorNode = ({ data }: any) => {
+        return (
+            <div className="bg-white rounded-lg shadow-md border p-3 w-[180px] h-[100px] flex flex-col justify-center">
+                <div className="flex justify-center">
+                    {data.processor?.type === 'sql' && <CircleStack />}
+                    {data.processor?.type === 'processors' && <CpuChip />}
+                </div>
+                <div className="font-bold text-sm text-center">{data.label}</div>
+                <div className="text-xs text-gray-500 truncate">
+                    {data.processor?.description}
+                </div>
+
+                <Handle type="target" position={Position.Top} />
+                <Handle type="source" position={Position.Bottom} />
+            </div>
+        )
+    }
+
+    const nodeTypes = useMemo(() => ({
+        processor: ProcessorNode,
+    }), []);
+
+    const createDragPreview = (text: string) => {
+        const el = document.createElement('div');
+        el.style.position = 'absolute';
+        el.style.top = '-1000px';
+        el.style.left = '-1000px';
+        el.style.padding = '8px 12px';
+        el.style.background = '#2563eb';
+        el.style.color = 'white';
+        el.style.borderRadius = '8px';
+        el.style.fontSize = '14px';
+        el.style.fontWeight = '600';
+        el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+        el.innerText = text;
+
+        document.body.appendChild(el);
+        return el;
+    }
+
     if (checking) {
         return (
             <CanvasLayout title="Loading...">
@@ -299,11 +351,36 @@ const DesignCanvasFlow = () => {
                     {/* React Flow */}
                     <ReactFlowProvider>
                         <ReactFlow
+                            nodeTypes={nodeTypes}
                             nodes={nodes}
                             edges={edges}
                             onNodesChange={onNodesChange}
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
+                            onInit={setRfInstance}
+                            deleteKeyCode={['Backspace', 'Delete']}
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move'
+                            }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                if (!rfInstance) return;
+
+                                const processor = JSON.parse(
+                                    e.dataTransfer.getData('application/processor')
+                                );
+
+                                const position = rfInstance.screenToFlowPosition({
+                                    x: e.clientX,
+                                    y: e.clientY,
+                                });
+
+                                addProcessorNode(processor, position);
+
+                                closeModal();
+                                setActiveModal(null);
+                            }}
                             fitView
                             proOptions={{ hideAttribution: true }}
                             style={{ width: '100%', height: '100%' }}
@@ -425,17 +502,17 @@ const DesignCanvasFlow = () => {
 
                     {/* Modal */}
                     <Modal
-                        backdrop="blur"
                         classNames={{
                             base:
                                 activeModal === 'processors'
-                                    ? 'w-[80vw] h-[85vh] max-w-none max-h-none flex flex-col z-50'
-                                    : 'z-50',
+                                    ? 'pointer-events-auto w-[80vw] h-[85vh] max-w-none max-h-none flex flex-col z-50'
+                                    : 'pointer-events-auto z-50',
                             body:
                                 activeModal === 'processors'
                                     ? 'p-6 overflow-y-auto'
                                     : 'p-10',
                             closeButton: "hover:bg-white/5 active:bg-white/10",
+                            backdrop: "pointer-events-none",
                         }}
                         isOpen={isOpen}
                         radius="lg"
@@ -536,7 +613,42 @@ const DesignCanvasFlow = () => {
 
                                                             {/* All Button */}
                                                             {filteredProcessors.map((p) => (
-                                                                <button className="bg-gray-300 w-[250px] h-[90px] p-3 rounded text-white text-start flex gap-2 hover:bg-gray-500 transition items-center">
+                                                                <button
+                                                                    className={`w-[250px] h-[90px] p-3 rounded text-white text-start flex gap-2 transition items-center
+                                                                    ${selectedProcessors.find((x) => x.id === p.id)
+                                                                            ? 'bg-blue-600'
+                                                                            : 'bg-gray-300 hover:bg-gray-500'
+                                                                        }
+                                                                    `}
+                                                                    key={p.id}
+                                                                    draggable
+                                                                    onDragStart={(e) => {
+                                                                        e.dataTransfer.setData(
+                                                                            'application/processor',
+                                                                            JSON.stringify(p)
+                                                                        );
+                                                                        e.dataTransfer.effectAllowed = 'move';
+
+                                                                        const preview = createDragPreview(p.name);
+                                                                        e.dataTransfer.setDragImage(preview, 20, 20);
+
+                                                                        setTimeout(() => {
+                                                                            document.body.removeChild(preview);
+                                                                        }, 0);
+
+                                                                        requestAnimationFrame(() => {
+                                                                            onOpenChange();
+                                                                            closeModal();
+                                                                        })
+                                                                    }}
+                                                                    onClick={() => {
+                                                                        setSelectedProcessors((prev) =>
+                                                                            prev.find((x) => x.id === p.id)
+                                                                                ? prev.filter((x) => x.id !== p.id)
+                                                                                : [...prev, p]
+                                                                        );
+                                                                    }}
+                                                                >
 
                                                                     {/* Icon */}
                                                                     <div>
@@ -548,11 +660,9 @@ const DesignCanvasFlow = () => {
                                                                         <h1 className='text-lg font-bold'>
                                                                             {p.name}
                                                                         </h1>
-                                                                        <Tooltip content={p.description}>
-                                                                            <small className='text-xs tracking-tight truncate max-w-[180px]'>
-                                                                                {p.description}
-                                                                            </small>
-                                                                        </Tooltip>
+                                                                        <small className='text-xs tracking-tight truncate max-w-[180px]'>
+                                                                            {p.description}
+                                                                        </small>
                                                                     </div>
                                                                 </button>
                                                             ))}
@@ -564,14 +674,23 @@ const DesignCanvasFlow = () => {
                                                     {/* Button Close */}
                                                     <div className="w-full border border-gray-500 p-3 flex justify-end">
                                                         <Button
+                                                            isDisabled={selectedProcessors.length === 0}
                                                             onPress={() => {
+                                                                selectedProcessors.forEach((p, idx) => {
+                                                                    addProcessorNode(p, {
+                                                                        x: 100 + idx * 40,
+                                                                        y: 100 + idx * 40,
+                                                                    });
+                                                                });
+
+                                                                setSelectedProcessors([]);
                                                                 onClose();
                                                                 closeModal();
                                                             }}
                                                             color='primary'
                                                             variant='flat'
                                                         >
-                                                            Close
+                                                            Add ({selectedProcessors.length})
                                                         </Button>
                                                     </div>
 
