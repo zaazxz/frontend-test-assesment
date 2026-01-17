@@ -21,8 +21,13 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const protectedRoutes = getProtectedRoutes();
-    const isAuthRoute = router.pathname.startsWith("/auth");
-    const isProtectedRoute = protectedRoutes.includes(router.pathname);
+
+    const pathname = router.asPath;
+    const isAuthRoute = pathname.startsWith("/auth");
+
+    const isProtectedRoute = protectedRoutes.some((route) =>
+      router.asPath === route || router.asPath.startsWith(route + "/")
+    );
 
     if (token) {
       hadTokenRef.current = true;
@@ -47,20 +52,20 @@ export default function App({ Component, pageProps }: AppProps) {
     const interval = setInterval(() => {
       const token = localStorage.getItem("token");
       const protectedRoutes = getProtectedRoutes();
-      const isProtectedRoute = protectedRoutes.includes(router.pathname);
+      const pathname = router.asPath;
 
-      if (
-        !token &&
-        hadTokenRef.current &&
-        isProtectedRoute
-      ) {
+      const isProtectedRoute = protectedRoutes.some((route) =>
+        pathname === route || pathname.startsWith(route + "/")
+      );
+
+      if (!token && hadTokenRef.current && isProtectedRoute) {
         setShowSessionModal(true);
         hadTokenRef.current = false;
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [router.pathname]);
+  }, [router.asPath]);
 
   const handleSessionConfirm = () => {
     localStorage.removeItem("token");

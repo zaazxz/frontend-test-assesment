@@ -1,13 +1,25 @@
+import { slugify } from '@/utils/helper/slugify';
 import { create } from 'zustand';
 
 interface FlowVersion {
+    id: string;
     majorVersion: number;
     minorVersion: number;
     designName: string;
     comment: string;
-    status: string;
+    status: "draft" | "published";
     lastUpdated: string;
     minifiConfigVersion: any;
+}
+
+interface CreateFlowVersionInput {
+    majorVersion: number;
+    minorVersion: number;
+    designName: string;
+    comment: string;
+    status: "draft" | "published";
+    lastUpdated: string;
+    minifiConfigVersion: Record<string, any>;
 }
 
 interface Design {
@@ -26,9 +38,14 @@ interface DesignState {
 
     fetchDesigns: () => Promise<void>;
     setSelectedDesign: (id: number) => void;
-    createFlowVersion: (payload: FlowVersion) => Promise<void>;
+    createFlowVersion: (payload: CreateFlowVersionInput) => Promise<void>;
     clearSelectedDesign: () => void;
     setSearch: (value: string) => void;
+
+    findFlowById: (flowId: string) => {
+        design: Design;
+        flow: FlowVersion;
+    } | null;
 }
 
 export const useDesignStore = create<DesignState>((set, get) => ({
@@ -78,18 +95,26 @@ export const useDesignStore = create<DesignState>((set, get) => ({
 
     },
 
-    createFlowVersion: async (flowVersion) => {
+    createFlowVersion: async (flowVersion: CreateFlowVersionInput) => {
         const design = get().selectedDesign;
-        console.log("SELECTED DESIGN:", design);
-
         if (!design) return;
+
+        // Custom slug for flow version
+        const designSlug = slugify(design.classId);
+        const generatedId = `fv-${designSlug}-${flowVersion.majorVersion}-${flowVersion.minorVersion}`;
+
+        // Edit payload
+        const payload = {
+            ...flowVersion,
+            id: generatedId,
+        }
 
         const res = await fetch(`/api/design/${design.id}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(flowVersion),
+            body: JSON.stringify(payload),
         })
 
         const updatedDesign = await res.json();
@@ -100,6 +125,23 @@ export const useDesignStore = create<DesignState>((set, get) => ({
             ),
             selectedDesign: updatedDesign
         }))
-    }
+    },
+
+    findFlowById(flowId) {
+        const designs = get().designs;
+        
+        for (const design of designs) {
+            const flow = design.flowVersion.find((f: any) => f.id === flowId);
+            if (flow) {
+                return {
+                    design: design,
+                    flow: flow,
+                };
+            }
+        }
+
+        return null;
+
+    },
 
 }))

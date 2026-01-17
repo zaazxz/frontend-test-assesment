@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Head } from "./head";
-import { getBreadcrumbs } from "@/utils/getBreadcrumbs";
+import { getBreadcrumbs } from "@/utils/helper/getBreadcrumbs";
 import { useRouter } from "next/router";
 
 import Bars3 from "@/components/icons/Bars3";

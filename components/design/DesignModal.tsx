@@ -1,14 +1,15 @@
 import { useDesignStore } from '@/stores/useDesignStore';
 import { Button } from '@heroui/button';
+import { Chip } from '@heroui/chip';
+import { Form } from '@heroui/form';
 import { Input, Textarea } from '@heroui/input';
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@heroui/modal';
 import { Select, SelectItem } from '@heroui/select';
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
-import React, { FormEvent, useMemo, useState } from 'react'
-import Plus from '../icons/Plus';
-import { Form } from '@heroui/form';
-import { Chip } from '@heroui/chip';
 import { Spinner } from '@heroui/spinner';
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
+import { useRouter } from 'next/router';
+import React, { FormEvent, useMemo, useState } from 'react';
+import Plus from '../icons/Plus';
 
 interface Props {
     isOpen: boolean;
@@ -18,6 +19,9 @@ interface Props {
 }
 
 const DesignModal = ({ isOpen, onOpenChange, items, onOpen }: Props) => {
+
+    // Router
+    const router = useRouter();
 
     // Fetch data
     const { createFlowVersion, loading } = useDesignStore();
@@ -40,7 +44,7 @@ const DesignModal = ({ isOpen, onOpenChange, items, onOpen }: Props) => {
             comment: comment,
             status: "draft",
             lastUpdated: new Date().toISOString(),
-            minifiConfigVersion: {}
+            minifiConfigVersion: {},
         });
 
         // reset Form
@@ -239,7 +243,21 @@ const DesignModal = ({ isOpen, onOpenChange, items, onOpen }: Props) => {
                                         </TableHeader>
                                         <TableBody>
                                             {items.map((flow, index) => (
-                                                <TableRow key={`${flow.majorVersion}.${flow.minorVersion}-${index}`}>
+                                                <TableRow 
+                                                    key={`${flow.majorVersion}.${flow.minorVersion}-${index}`}
+                                                    onPointerDown={() => {
+                                                        console.log("selected id : ", flow.id);
+                                                    }}
+                                                    onDoubleClick={() => {
+                                                        onOpenChange();
+                                                        router.push(`/design/${flow.id}`);
+                                                    }}
+                                                    className="
+                                                        cursor-pointer
+                                                        transition-colors
+                                                        hover:bg-gray-100
+                                                    "
+                                                >
 
                                                     {/* Versioning */}
                                                     <TableCell>
