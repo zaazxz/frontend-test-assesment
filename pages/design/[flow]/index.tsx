@@ -1,4 +1,5 @@
 import LoadingOverlay from '@/components/common/LoadingOverlay';
+import NodeEdgeCustom from '@/components/design/node/NodeEdgeCustom';
 import CircleStack from '@/components/icons/CircleStack';
 import Cloud from '@/components/icons/Cloud';
 import CloudArrowUp from '@/components/icons/CloudArrowUp';
@@ -12,7 +13,7 @@ import CanvasLayout from '@/layouts/canvas';
 import { useDesignStore } from '@/stores/useDesignStore';
 import { Button } from '@heroui/button';
 import { Modal, ModalBody, ModalContent, useDisclosure } from '@heroui/modal';
-import { Tooltip } from '@heroui/tooltip';
+import { Checkbox } from '@heroui/react';
 import { addEdge, applyEdgeChanges, applyNodeChanges, Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider } from '@xyflow/react';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -20,7 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 const DesignCanvasFlow = () => {
 
     // type
-    type ModalType = 'sorry' | 'processors' | 'export' | 'publish' | null;
+    type ModalType = 'sorry' | 'processors' | 'export' | 'publish' | 'connection' | 'connection-error' | null;
     type ProcessorType = 'sql' | 'processors';
 
     // Dummy data (debugging use)
@@ -187,8 +188,12 @@ const DesignCanvasFlow = () => {
     const [invalid, setInvalid] = useState(false);
     const [rfInstance, setRfInstance] = useState<any>(null);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
+    const [connectionError, setConnectionError] = useState<string | null>(null);
+    const [connectionLabel, setConnectionLabel] = useState<string>('success');
+    const [pendingEdge, setPendingEdge] = useState<any | null>(null);
     const [selectedProcessors, setSelectedProcessors] = useState<any[]>([]);
     const [activeButtonFilter, setActiveButtonFilter] = useState<'all' | 'processors' | 'sql'>('all');
+    const [connectionRelationship, setConnectionRelationship] = useState<'success' | 'failure' | 'retry'>('success');
     const [checking, setChecking] = useState(true);
     const [resolved, setResolved] = useState<{
         design: any;
@@ -220,18 +225,28 @@ const DesignCanvasFlow = () => {
         init();
     }, [router.isReady, flow])
 
-    const onNodesChange = useCallback(
-        (changes: any) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
-        [],
-    );
+    const onNodesChange = useCallback((changes: any) => {
+        setNodes((nodesSnapshot) => {
+            const updatedNodes = applyNodeChanges(changes, nodesSnapshot);
+
+            // Delete edges
+            const removeNodeIds = changes
+                .filter((c: any) => c.type === 'remove')
+                .map((c: any) => c.id);
+
+            if (removeNodeIds.length > 0) {
+                setEdges((eds) =>
+                    eds.filter((e) => !removeNodeIds.includes(e.source) && !removeNodeIds.includes(e.target))
+                );
+            }
+
+            return updatedNodes;
+
+        })
+    }, []);
 
     const onEdgesChange = useCallback(
         (changes: any) => setEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
-        [],
-    );
-
-    const onConnect = useCallback(
-        (params: any) => setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
         [],
     );
 
@@ -268,6 +283,10 @@ const DesignCanvasFlow = () => {
 
         setNodes((nds) => [...nds, newNode]);
     }
+
+    const edgeTypes = useMemo(() => ({
+        custom: NodeEdgeCustom
+    }), [])
 
     const ProcessorNode = ({ data }: any) => {
         return (
@@ -308,6 +327,26 @@ const DesignCanvasFlow = () => {
         document.body.appendChild(el);
         return el;
     }
+
+    const onConnect = useCallback((params: any) => {
+
+        // Dont connect to self node
+        if (params.source === params.target) {
+            setConnectionError("Cannot connect node to itself");
+            openModal('connection-error');
+            return;
+        }
+
+        // Connection success
+        setPendingEdge(params);
+        setConnectionLabel('success');
+        openModal('connection');
+
+    }, [])
+
+    const removeEdge = (edgeId: string) => {
+        setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+    };
 
     if (checking) {
         return (
@@ -354,6 +393,7 @@ const DesignCanvasFlow = () => {
                             nodeTypes={nodeTypes}
                             nodes={nodes}
                             edges={edges}
+                            edgeTypes={edgeTypes}
                             onNodesChange={onNodesChange}
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
@@ -550,6 +590,165 @@ const DesignCanvasFlow = () => {
                                                 <div className="flex items-center justify-center gap-2">
                                                     <p className="text-lg">
                                                         This feature is under development
+                                                    </p>
+                                                </div>
+
+                                                {/* Close button */}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Button
+                                                        onPress={() => {
+                                                            onClose();
+                                                            closeModal();
+                                                        }}
+                                                        color='primary'
+                                                        variant='flat'
+                                                    >
+                                                        Close
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Connection Success */}
+                                        {activeModal === 'connection' && (
+                                            <>
+
+                                                {/* Title */}
+                                                <div className="flex items-center justify-start gap-2">
+                                                    <h1 className="text-2xl font-bold">
+                                                        Create Connection
+                                                    </h1>
+                                                </div>
+
+                                                {/* Descriptiion */}
+                                                <div className="flex items-center justify-start gap-2">
+                                                    <p className="text-sm font-bold">
+                                                        Source Relationship
+                                                    </p>
+                                                </div>
+
+                                                {/* Options */}
+                                                <div className="flex flex-col gap-2">
+
+                                                    {/* Success */}
+                                                    <label className="w-full flex gap-2 p-3 rounded bg-gray-300/40 items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="connectionRelationship"
+                                                            value="success"
+                                                            checked={connectionRelationship === 'success'}
+                                                            onChange={() => setConnectionRelationship('success')}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-md font-bold text-green-500">Success</span>
+                                                            <small className="text-xs text-gray-500">Connection success procedure</small>
+                                                        </div>
+                                                    </label>
+
+                                                    {/* Failure */}
+                                                    <label className="w-full flex gap-2 p-3 rounded bg-gray-300/40 items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="connectionRelationship"
+                                                            value="failure"
+                                                            checked={connectionRelationship === 'failure'}
+                                                            onChange={() => setConnectionRelationship('failure')}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-md font-bold text-red-500">Failure</span>
+                                                            <small className="text-xs text-gray-500">Connection failure procedure</small>
+                                                        </div>
+                                                    </label>
+
+                                                    {/* Retry */}
+                                                    <label className="w-full flex gap-2 p-3 rounded bg-gray-300/40 items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="connectionRelationship"
+                                                            value="retry"
+                                                            checked={connectionRelationship === 'retry'}
+                                                            onChange={() => setConnectionRelationship('retry')}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-md font-bold text-gray-500">Retry</span>
+                                                            <small className="text-xs text-gray-500">Connection retry procedure</small>
+                                                        </div>
+                                                    </label>
+
+                                                </div>
+
+                                                {/* Close & Add button */}
+                                                <div className="flex items-center justify-end gap-2">
+
+                                                    {/* Add Button */}
+                                                    <Button
+                                                        onPress={() => {
+                                                            if (!pendingEdge) return;
+
+                                                            // Create new Edges
+                                                            const newEdge = {
+                                                                ...pendingEdge,
+                                                                type: 'custom',
+                                                                label: connectionRelationship,
+                                                                relationship: [connectionRelationship]
+                                                            }
+
+                                                            setEdges((eds) => addEdge(newEdge, eds));
+
+                                                            // Reset modal and pending Edge
+                                                            setPendingEdge(null);
+                                                            setConnectionRelationship('success');
+                                                            onClose();
+                                                            closeModal();
+                                                            setActiveModal(null);
+
+                                                        }}
+                                                        color='primary'
+                                                        variant='flat'
+                                                    >
+                                                        Add
+                                                    </Button>
+
+                                                    {/* Close Button */}
+                                                    <Button
+                                                        onPress={() => {
+                                                            onClose();
+                                                            closeModal();
+                                                        }}
+                                                        color='default'
+                                                        variant='flat'
+                                                    >
+                                                        Close
+                                                    </Button>
+
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Connection Error */}
+                                        {activeModal === 'connection-error' && (
+                                            <>
+                                                {/* Exclamation Triangle */}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <div className='w-15 h-15 rounded-full bg-red-500 flex justify-center items-center text-2xl text-white'>
+                                                        <ExclamationTriangle />
+                                                    </div>
+                                                </div>
+
+                                                {/* Sorry message */}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <h1 className="text-2xl font-bold">
+                                                        Error
+                                                    </h1>
+                                                </div>
+
+                                                {/* Description */}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <p className="text-lg">
+                                                        {connectionError}
                                                     </p>
                                                 </div>
 
