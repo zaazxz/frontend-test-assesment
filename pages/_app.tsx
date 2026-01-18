@@ -10,6 +10,7 @@ import '@xyflow/react/dist/style.css';
 import LoadingOverlay from "@/components/common/LoadingOverlay";
 import { getProtectedRoutes } from "@/config/site";
 import SessionExpiredModal from "@/components/common/SessionExpiredModal";
+import { ToastProvider } from "@heroui/toast";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -81,16 +82,21 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider attribute="class" defaultTheme="light">
-        <Component {...pageProps} />
+      <ToastProvider
+        placement="bottom-right"
+        toastOffset={16}
+      />
 
-        <SessionExpiredModal
-          isOpen={showSessionModal}
-          title="Session expired"
-          description="No session found, please login again."
-          onConfirm={handleSessionConfirm}
-        />
-      </NextThemesProvider>
+        <NextThemesProvider attribute="class" defaultTheme="light">
+          <Component {...pageProps} />
+
+          <SessionExpiredModal
+            isOpen={showSessionModal}
+            title="Session expired"
+            description="No session found, please login again."
+            onConfirm={handleSessionConfirm}
+          />
+        </NextThemesProvider>
     </HeroUIProvider>
   );
 }

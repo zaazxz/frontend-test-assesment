@@ -5,15 +5,17 @@ import Cloud from '@/components/icons/Cloud';
 import CloudArrowUp from '@/components/icons/CloudArrowUp';
 import CpuChip from '@/components/icons/CpuChip';
 import DocumentArrowDown from '@/components/icons/DocumentArrowDown';
+import ExclamationCircle from '@/components/icons/ExclamationCircle';
 import ExclamationTriangle from '@/components/icons/ExclamationTriangle';
 import Flag from '@/components/icons/Flag';
 import Funnel from '@/components/icons/Funnel';
 import Square3Stack3d from '@/components/icons/Square3Stack3d';
 import CanvasLayout from '@/layouts/canvas';
 import { useDesignStore } from '@/stores/useDesignStore';
+import { Design, FlowEdge, FlowNode, FlowVersion } from '@/types/flow';
 import { Button } from '@heroui/button';
 import { Modal, ModalBody, ModalContent, useDisclosure } from '@heroui/modal';
-import { Checkbox } from '@heroui/react';
+import { addToast, Chip, Code, Progress } from '@heroui/react';
 import { addEdge, applyEdgeChanges, applyNodeChanges, Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider } from '@xyflow/react';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,8 +23,157 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 const DesignCanvasFlow = () => {
 
     // type
-    type ModalType = 'sorry' | 'processors' | 'export' | 'publish' | 'connection' | 'connection-error' | null;
+    type ModalType = 'sorry' | 'processors' | 'export' | 'validation' | 'connection' | 'connection-error' | null;
     type ProcessorType = 'sql' | 'processors';
+    type ValidationStep = 'idle' | 'checking-design-name' | 'checking-major' | 'checking-minor' | 'checking-nodes' | 'checking-edges' | 'done';
+
+    const [isValidated, setIsValidated] = useState(false);
+    const [isValidating, setIsValidating] = useState(false);
+    const [validationProgress, setValidationProgress] = useState(0);
+    const [currentStep, setCurrentStep] = useState<ValidationStep>('idle');
+    const [validationError, setValidationError] = useState<string | null>(null);
+    const [showValidationError, setShowValidationError] = useState(false);
+
+    const validationStepText: Record<ValidationStep, string> = {
+        'idle': '',
+        'checking-design-name': 'Checking design identifier',
+        'checking-major': 'Checking major version',
+        'checking-minor': 'Checking minor version',
+        'checking-nodes': 'Checking nodes',
+        'checking-edges': 'Checking connections',
+        'done': 'Validation completed',
+    };
+
+    const runValidation = async () => {
+        if (isValidating) return;
+
+        setIsValidating(true);
+        setValidationProgress(0);
+        setIsValidated(false);
+
+        const steps: ValidationStep[] = [
+            'checking-design-name',
+            'checking-major',
+            'checking-minor',
+            'checking-nodes',
+            'checking-edges',
+
+        ]
+
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            setCurrentStep(step);
+
+            // Delay simulation
+            await new Promise((res) => setTimeout(res, 1000));
+
+            // Validation Rule
+            switch (step) {
+                case 'checking-design-name':
+                    if (!resolved?.design?.classId) {
+                        setIsValidating(false);
+                        triggerValidationError('Fail to catch Class ID');
+                        return
+                    }
+                    break;
+
+                case 'checking-major':
+                    if (resolved?.flow?.majorVersion == null) {
+                        setIsValidating(false);
+                        triggerValidationError('Major version is missing');
+                        return
+                    }
+                    break;
+
+                case 'checking-minor':
+                    if (resolved?.flow?.minorVersion == null) {
+                        setIsValidating(false);
+                        triggerValidationError('Minor version is missing');
+                        return
+                    }
+                    break;
+
+                case 'checking-nodes':
+                    if (nodes.length < 1) {
+                        setIsValidating(false);
+                        triggerValidationError('At least one processor is required');
+                        return
+                    }
+                    break;
+
+                case 'checking-edges':
+
+                    // Min 1 Connection
+                    if (edges.length < 1) {
+                        setIsValidating(false);
+                        triggerValidationError('At least one connection is required');
+                        return
+                    }
+
+                    // Self Loop Validation
+                    const hasSelfLoop = edges.some(
+                        (edge) => edge.source === edge.target
+                    );
+
+                    if (hasSelfLoop) {
+                        setIsValidating(false);
+                        triggerValidationError(
+                            'Invalid connection: node cannot connect to itself'
+                        );
+                        return;
+                    }
+
+                    // Isolated Node Validation
+                    const connectedNodeIds = new Set(
+                        edges.flatMap((edge) => [edge.source, edge.target])
+                    );
+
+                    const isolatedNodes = nodes.filter(
+                        (node) => !connectedNodeIds.has(node.id)
+                    );
+
+                    if (isolatedNodes.length > 0) {
+                        setIsValidating(false);
+                        triggerValidationError(
+                            'Some processors are not connected'
+                        );
+                        return;
+                    }
+
+                    // Unstable signal simulation
+                    if (Math.random() < 0.15) {
+                        setIsValidating(false);
+                        triggerValidationError(
+                            'Signal unstable, please try again'
+                        );
+                        return;
+                    }
+
+                    break;
+            }
+
+            const totalSteps = steps.length;
+
+            setValidationProgress(
+                Math.round(((i + 1) / totalSteps) * 100)
+            );
+        }
+
+        setCurrentStep('done');
+        setIsValidating(false);
+        setIsValidated(true);
+
+    }
+
+    const triggerValidationError = (message: string) => {
+        setValidationError(message);
+        setShowValidationError(true);
+
+        setTimeout(() => {
+            setShowValidationError(false);
+            setValidationError(null);
+        }, 3000);
+    };
 
     // Dummy data (debugging use)
     const processors = [
@@ -177,12 +328,14 @@ const DesignCanvasFlow = () => {
     const { flow } = router.query;
 
     // use Design Store
-    const { findFlowById, designs, fetchDesigns } = useDesignStore();
+    const { findFlowById, designs, fetchDesigns, updateFlowVersionConfig } = useDesignStore();
 
     // Disclosure
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
+    const { isOpen: isPublishOpen, onOpen: onPublishOpen, onOpenChange: onPublishOpenChange } = useDisclosure();
 
     // State
+    const [value, setValue] = useState(0);
     const [nodes, setNodes] = useState<any[]>([]);
     const [edges, setEdges] = useState<any[]>([]);
     const [invalid, setInvalid] = useState(false);
@@ -200,29 +353,97 @@ const DesignCanvasFlow = () => {
         flow: any;
     } | null>(null);
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setValue((v) => (v >= 100 ? 0 : v + 10));
+        }, 500);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const hydrateCanvasFromMinifi = (minifiConfig: any) => {
+        const nodesFromConfig = Array.isArray(minifiConfig?.nodes)
+            ? minifiConfig.nodes
+            : [];
+
+        const edgesFromConfig = Array.isArray(minifiConfig?.edges)
+            ? minifiConfig.edges
+            : [];
+
+        const hydratedNodes = nodesFromConfig.map((n: any) => ({
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: n.config,
+        }));
+
+        const hydratedEdges = edgesFromConfig.map((e: any) => ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            type: 'custom',
+            label: e.relationship?.[0],
+            data: {
+                relationship: e.relationship,
+            },
+        }));
+
+        setNodes(hydratedNodes);
+        setEdges(hydratedEdges);
+    };
+
     // Fetch and validate
     useEffect(() => {
-        if (!flow) return;
+        if (!router.isReady || !flow) return;
+
+        let isMounted = true;
 
         const init = async () => {
+            setChecking(true);
+
+            // 1. Fetch designs once
             if (designs.length === 0) {
                 await fetchDesigns();
             }
 
+            // 2. Find flow by id
             const result = findFlowById(flow as string);
 
+            if (!isMounted) return;
+
+            // 3. Invalid flow handling
             if (!result) {
-                setInvalid(true)
+                setInvalid(true);
+                setResolved(null);
+                setNodes([]);
+                setEdges([]);
+                setChecking(false);
+                return;
+            }
+
+            // 4. Valid flow
+            setInvalid(false);
+            setResolved(result);
+
+            // 5. Reset validation state
+            resetValidation();
+
+            // 6. Hydrate canvas from minifiConfigVersion
+            if (result.flow?.minifiConfigVersion) {
+                hydrateCanvasFromMinifi(result.flow.minifiConfigVersion);
             } else {
-                setInvalid(false)
-                setResolved(result);
+                setNodes([]);
+                setEdges([]);
             }
 
             setChecking(false);
-
-        }
+        };
 
         init();
+
+        return () => {
+            isMounted = false;
+        };
     }, [router.isReady, flow])
 
     const onNodesChange = useCallback((changes: any) => {
@@ -348,9 +569,131 @@ const DesignCanvasFlow = () => {
         setEdges((eds) => eds.filter((e) => e.id !== edgeId));
     };
 
+    const buildMinifiConfigVersion = (
+        nodes: FlowNode[],
+        edges: FlowEdge[]
+    ) => {
+        return {
+            nodes: nodes.map(node => ({
+                id: node.id,
+                type: node.type,
+                position: node.position,
+                config: node.data,
+            })),
+            edges: edges.map(edge => ({
+                id: edge.id,
+                source: edge.source,
+                target: edge.target,
+                relationship: edge.data?.relationship,
+            })),
+        };
+    };
+
+    const buildFlowVersion = (
+        flow: FlowVersion,
+        classId: string,
+        nodes: FlowNode[],
+        edges: FlowEdge[]
+    ) => {
+        return {
+            majorVersion: flow.majorVersion,
+            minorVersion: flow.minorVersion,
+            designName: flow.designName,
+            comment: flow.comment,
+            status: 'draft',
+            lastUpdated: new Date().toISOString(),
+            minifiConfigVersion: buildMinifiConfigVersion(nodes, edges),
+            id: `fv-${classId}-${flow.majorVersion}-${flow.minorVersion}`,
+        };
+    };
+
+    const buildPublishPayload = ({
+        design,
+        flow,
+        nodes,
+        edges,
+    }: {
+        design: Design;
+        flow: FlowVersion;
+        nodes: FlowNode[];
+        edges: FlowEdge[];
+    }) => {
+        return {
+            id: design.id,
+            classId: design.classId,
+            numberOfAgents: design.numberOfAgents,
+            flowVersion: [
+                buildFlowVersion(
+                    resolved?.flow,
+                    resolved?.design.classId,
+                    nodes,
+                    edges
+                ),
+            ],
+        };
+    };
+
+    const payload = useMemo(() => {
+        if (!resolved) return null;
+
+        return buildPublishPayload({
+            design: resolved.design,
+            flow: resolved.flow,
+            nodes,
+            edges,
+        });
+    }, [resolved, nodes, edges]);
+
+    const saveCanvasToFlowVersion = async () => {
+        if (!resolved) return;
+
+        const minifiConfigVersion = {
+            nodes: nodes.map(n => ({
+                id: n.id,
+                type: n.type,
+                position: n.position,
+                config: n.data,
+            })),
+            edges: edges.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                relationship: e.relationship || e.data?.relationship,
+            })),
+        };
+
+        await updateFlowVersionConfig(
+            resolved.design.id,
+            resolved.flow.id,
+            minifiConfigVersion
+        );
+    };
+
+    const resetValidation = () => {
+        setIsValidated(false);
+        setIsValidating(false);
+        setValidationProgress(0);
+        setCurrentStep('idle');
+        setValidationError(null);
+        setShowValidationError(false);
+    };
+
+    useEffect(() => {
+        resetValidation();
+    }, [nodes, edges, resolved?.flow?.id]);
+
+    const closeAllModals = () => {
+        // Main modal (validation / processors / etc)
+        onOpenChange();
+        setActiveModal(null);
+
+        // Publish modal
+        onPublishOpenChange();
+    };
+
     if (checking) {
         return (
-            <CanvasLayout title="Loading...">
+            <CanvasLayout title="Loading..." lastUpdated=''>
                 <LoadingOverlay />
             </CanvasLayout>
         );
@@ -358,7 +701,7 @@ const DesignCanvasFlow = () => {
 
     if (invalid) {
         return (
-            <CanvasLayout title="Unknown Version">
+            <CanvasLayout title="Unknown Version" lastUpdated=''>
                 <div className="w-full h-full flex items-center justify-center">
                     <div className="bg-white shadow-lg rounded-xl p-6 text-center">
                         <h2 className="text-lg font-bold mb-2">Version Unknown</h2>
@@ -382,6 +725,7 @@ const DesignCanvasFlow = () => {
             <CanvasLayout
                 title="Design Flow Editor"
                 onBack={() => router.push('/design')}
+                lastUpdated={resolved?.flow?.lastUpdated}
             >
 
                 {/* Content Wrapper */}
@@ -524,7 +868,7 @@ const DesignCanvasFlow = () => {
                                     <button
                                         className="btn btn-primary bg-white rounded-lg shadow-md p-2 hover:bg-white/50 cursor-pointer z-50 text-sm w-20 h-20 flex justify-center items-center flex-col gap-1"
                                         onClick={() => {
-                                            openModal('sorry')
+                                            openModal('validation')
                                         }}
                                     >
                                         <CloudArrowUp />
@@ -542,13 +886,14 @@ const DesignCanvasFlow = () => {
 
                     {/* Modal */}
                     <Modal
+                        backdrop={activeModal === 'processors' || activeModal === 'validation' ? 'opaque' : 'blur'}
                         classNames={{
                             base:
-                                activeModal === 'processors'
+                                activeModal === 'processors' || activeModal === 'validation'
                                     ? 'pointer-events-auto w-[80vw] h-[85vh] max-w-none max-h-none flex flex-col z-50'
                                     : 'pointer-events-auto z-50',
                             body:
-                                activeModal === 'processors'
+                                activeModal === 'processors' || activeModal === 'validation'
                                     ? 'p-6 overflow-y-auto'
                                     : 'p-10',
                             closeButton: "hover:bg-white/5 active:bg-white/10",
@@ -773,7 +1118,7 @@ const DesignCanvasFlow = () => {
                                             <>
 
                                                 {/* Wrapper */}
-                                                <div className="border flex flex-col h-full justify-between">
+                                                <div className="flex flex-col h-full justify-between">
 
                                                     {/* Buttons section */}
                                                     <div className="w-full flex flex-1 min-h-0">
@@ -808,7 +1153,7 @@ const DesignCanvasFlow = () => {
                                                         </div>
 
                                                         {/* Right section */}
-                                                        <div className="w-3/4 border border-red-500 p-3 flex flex-wrap gap-2 items-start content-start justify-start overflow-y-auto">
+                                                        <div className="w-3/4 p-3 flex flex-wrap gap-2 items-start content-start justify-start overflow-y-auto">
 
                                                             {/* All Button */}
                                                             {filteredProcessors.map((p) => (
@@ -871,7 +1216,7 @@ const DesignCanvasFlow = () => {
                                                     </div>
 
                                                     {/* Button Close */}
-                                                    <div className="w-full border border-gray-500 p-3 flex justify-end">
+                                                    <div className="w-full p-3 flex justify-end">
                                                         <Button
                                                             isDisabled={selectedProcessors.length === 0}
                                                             onPress={() => {
@@ -898,11 +1243,214 @@ const DesignCanvasFlow = () => {
                                             </>
                                         )}
 
+                                        {/* Validation Modal */}
+                                        {activeModal === 'validation' && (
+                                            <>
+
+                                                {/* Wrapper */}
+                                                <div className="flex flex-col h-full min-h-0  justify-between">
+
+                                                    {/* Head Section */}
+                                                    <div className="w-full flex flex-col flex-1 min-h-0">
+
+                                                        {/* Title */}
+                                                        <div className="w-full p-2">
+                                                            <h1 className="text-xl font-bold">
+                                                                Publish Design Flow
+                                                            </h1>
+                                                        </div>
+
+                                                        {/* Design Status */}
+                                                        <div className="w-full p-2">
+                                                            <div className="flex w-full border border-gray-600/50 rounded-lg p-3 justify-between items-center">
+
+                                                                {/* Text */}
+                                                                <p className="text-sm font-bold text-blue-700">Design Status</p>
+
+                                                                {/* Chip */}
+                                                                <Chip
+                                                                    color={isValidated ? 'success' : 'warning'}
+                                                                    startContent={<ExclamationCircle />}
+                                                                    variant="flat"
+                                                                >
+                                                                    <small className="font-bold">
+                                                                        {isValidated ? 'Validated' : 'Not Validated'}
+                                                                    </small>
+                                                                </Chip>
+
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Loads Bar */}
+                                                        {isValidating && (
+                                                            <div className="w-full p-2">
+                                                                <div className="flex w-full border border-gray-600/50 rounded-lg p-3 flex-col gap-2">
+
+                                                                    <Progress
+                                                                        aria-label="Validating..."
+                                                                        className="w-full"
+                                                                        color="success"
+                                                                        showValueLabel
+                                                                        size="md"
+                                                                        value={validationProgress}
+                                                                    />
+
+                                                                    {/* Skeleton Text */}
+                                                                    <div className="animate-pulse text-sm text-gray-500">
+                                                                        {validationStepText[currentStep]}
+                                                                    </div>
+
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Validation Error */}
+                                                        {showValidationError && validationError && (
+                                                            <div className="w-full p-2">
+                                                                <div className="flex w-full border border-red-500/60 bg-red-500/10 rounded-lg p-3 gap-2 items-center ease-in-out duration-300 ">
+
+                                                                    <ExclamationTriangle className="text-red-500" />
+
+                                                                    <p className="text-sm font-bold text-red-600">
+                                                                        {validationError}
+                                                                    </p>
+
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Code JSON Output */}
+                                                        <div className="w-full p-2 flex-1 min-h-0">
+                                                            <Code
+                                                                className="flex w-full h-full overflow-auto whitespace-pre"
+                                                                as="pre"
+                                                            >
+                                                                {payload
+                                                                    ? JSON.stringify(payload, null, 2)
+                                                                    : '// No data to preview'}
+                                                            </Code>
+                                                        </div>
+
+                                                    </div>
+
+                                                    {/* Button Close */}
+                                                    <div className="w-full gap-2 p-3 flex justify-end">
+
+                                                        {/* Button Cancel */}
+                                                        <Button
+                                                            color='default'
+                                                            variant='flat'
+                                                            onPress={() => {
+                                                                onClose();
+                                                                closeModal();
+                                                            }}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+
+                                                        {/* Button Publish */}
+                                                        {!isValidated ? (
+                                                            <Button
+                                                                color="primary"
+                                                                variant="flat"
+                                                                isLoading={isValidating}
+                                                                onPress={runValidation}
+                                                            >
+                                                                {isValidating ? 'Validating' : 'Validate'}
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                color="primary"
+                                                                variant="flat"
+                                                                onPress={() => {
+                                                                    onPublishOpen();
+                                                                }}
+                                                            >
+                                                                Publish
+                                                            </Button>
+                                                        )}
+
+                                                    </div>
+
+                                                </div>
+
+                                            </>
+                                        )}
+
                                     </ModalBody>
                                 </>
                             )}
                         </ModalContent>
                     </Modal>
+
+                    {/* Publish Modal */}
+                    <Modal
+                        isOpen={isPublishOpen}
+                        onOpenChange={onPublishOpenChange}
+                        backdrop="blur"
+                        classNames={{
+                            base: "z-[60] w-[420px]",
+                            backdrop: "z-[50]",
+                        }}
+                        radius="lg"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <ModalBody className="p-6 flex flex-col gap-4">
+
+                                    <div className="flex justify-center">
+                                        <CloudArrowUp />
+                                    </div>
+
+                                    <h1 className="text-xl font-bold text-center">
+                                        Publish Design
+                                    </h1>
+
+                                    <p className="text-sm text-center text-gray-500">
+                                        Are you sure you want to publish this design?
+                                    </p>
+
+                                    <div className="flex justify-start gap-2 w-full">
+                                        <Button
+                                            variant="flat"
+                                            onPress={onClose}
+                                            className="w-full"
+                                        >
+                                            Cancel
+                                        </Button>
+
+                                        <Button
+                                            className="w-full"
+                                            color="primary"
+                                            onPress={async () => {
+                                                try {
+                                                    await saveCanvasToFlowVersion();
+                                                    closeAllModals();
+                                                    addToast({
+                                                        title: 'Published',
+                                                        description: 'Design published successfully 🚀',
+                                                        color: 'success',
+                                                        promise: new Promise((resolve) => setTimeout(resolve, 3000)),
+                                                    });
+                                                } catch (e) {
+                                                    addToast({
+                                                        title: 'Error',
+                                                        description: 'Failed to publish design',
+                                                        color: 'danger',
+                                                        promise: new Promise((resolve) => setTimeout(resolve, 3000)),
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            Publish
+                                        </Button>
+                                    </div>
+
+                                </ModalBody>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
 
                 </div>
 

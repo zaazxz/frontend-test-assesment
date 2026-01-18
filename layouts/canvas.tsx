@@ -7,9 +7,10 @@ interface CanvasLayoutProps {
     children: ReactNode;
     title?: string;
     onBack?: () => void;
+    lastUpdated?: string
 }
 
-export default function CanvasLayout({ children, title = "Home", onBack }: CanvasLayoutProps) {
+export default function CanvasLayout({ children, title = "Home", onBack, lastUpdated }: CanvasLayoutProps) {
     return (
         <div className="flex flex-col h-screen">
             <Head title={title} />
@@ -23,7 +24,7 @@ export default function CanvasLayout({ children, title = "Home", onBack }: Canva
             </div>
 
             {/* Footer */}
-            <Footer />
+            <Footer lastUpdated={lastUpdated} />
             
         </div>
     );

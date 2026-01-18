@@ -1,33 +1,6 @@
+import { CreateFlowVersionInput, Design, FlowVersion } from '@/types/flow';
 import { slugify } from '@/utils/helper/slugify';
 import { create } from 'zustand';
-
-interface FlowVersion {
-    id: string;
-    majorVersion: number;
-    minorVersion: number;
-    designName: string;
-    comment: string;
-    status: "draft" | "published";
-    lastUpdated: string;
-    minifiConfigVersion: any;
-}
-
-interface CreateFlowVersionInput {
-    majorVersion: number;
-    minorVersion: number;
-    designName: string;
-    comment: string;
-    status: "draft" | "published";
-    lastUpdated: string;
-    minifiConfigVersion: Record<string, any>;
-}
-
-interface Design {
-    id: number;
-    classId: string;
-    numberOfAgents: number;
-    flowVersion: [];
-}
 
 interface DesignState {
     designs: Design[];
@@ -46,6 +19,12 @@ interface DesignState {
         design: Design;
         flow: FlowVersion;
     } | null;
+
+    updateFlowVersionConfig: (
+        designId: number,
+        flowVersionId: string,
+        minifiConfigVersion: any
+    ) => Promise<void>;
 }
 
 export const useDesignStore = create<DesignState>((set, get) => ({
@@ -129,7 +108,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
 
     findFlowById(flowId) {
         const designs = get().designs;
-        
+
         for (const design of designs) {
             const flow = design.flowVersion.find((f: any) => f.id === flowId);
             if (flow) {
@@ -143,5 +122,35 @@ export const useDesignStore = create<DesignState>((set, get) => ({
         return null;
 
     },
+
+    updateFlowVersionConfig: async (
+        designId,
+        flowVersionId,
+        minifiConfigVersion
+    ) => {
+        const res = await fetch(`/api/design/${designId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                flowVersionId,
+                minifiConfigVersion,
+            }),
+        });
+
+        const updatedDesign = await res.json();
+
+        set(state => ({
+            designs: state.designs.map(d =>
+                d.id === updatedDesign.id ? updatedDesign : d
+            ),
+            selectedDesign:
+                state.selectedDesign?.id === updatedDesign.id
+                    ? updatedDesign
+                    : state.selectedDesign,
+        }));
+    },
+
 
 }))

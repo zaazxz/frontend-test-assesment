@@ -10,8 +10,11 @@
         "designName": "-",
         "comment": "this is my comment",
         "status": "draft",
-        "lastUpdated": "2022-01-01T00:00:00.000Z",
-        "minifiConfigVersion": {},
+        "lastUpdated": "2026-01-18T01:14:19.309Z",
+        "minifiConfigVersion": {
+          "nodes": [],
+          "edges": []
+        },
         "id": "fv-s2re-1-0"
       },
       {
@@ -20,8 +23,11 @@
         "designName": "Custom design",
         "comment": "test 1",
         "status": "draft",
-        "lastUpdated": "2026-01-16T22:38:55.985Z",
-        "minifiConfigVersion": {},
+        "lastUpdated": "2026-01-18T02:15:50.492Z",
+        "minifiConfigVersion": {
+          "nodes": [],
+          "edges": []
+        },
         "id": "fv-s2re-1-1"
       }
     ]
@@ -38,8 +44,38 @@
         "comment": "this is my comment",
         "status": "draft",
         "lastUpdated": "2022-01-01T00:00:00.000Z",
-        "minifiConfigVersion": {},
+        "minifiConfigVersion": {
+          "nodes": [],
+          "edges": []
+        },
         "id": "fv-s2re-custom-1-0"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "classId": "s2RE admin",
+    "numberOfAgents": 2,
+    "flowVersion": [
+      {
+        "majorVersion": 0,
+        "minorVersion": 0,
+        "designName": "-",
+        "comment": "",
+        "status": "draft",
+        "lastUpdated": "2026-01-18T02:25:08.542Z",
+        "minifiConfigVersion": {},
+        "id": "fv-s2re-admin-0-0"
+      },
+      {
+        "majorVersion": 1,
+        "minorVersion": 0,
+        "designName": "testing",
+        "comment": "test",
+        "status": "draft",
+        "lastUpdated": "2026-01-18T02:25:28.880Z",
+        "minifiConfigVersion": {},
+        "id": "fv-s2re-admin-1-0"
       }
     ]
   }
