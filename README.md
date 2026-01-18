@@ -118,7 +118,7 @@ For this reason, feature completeness and UX correctness were prioritized.
 ## How to Install & Run
 
 ### Prerequisites
-- Node.js >= 18
+- Node.js >= 18 | I use Node.js lts (24.12.0)
 - npm / pnpm / yarn
 
 ### Installation
